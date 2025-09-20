@@ -79,8 +79,6 @@
             padding: 20px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-height: 600px;
-            overflow-y: auto;
         }
         
         .result-item {
@@ -288,19 +286,29 @@
                 // Ẩn loading message lần đầu
                 if (loadingMsg) loadingMsg.style.display = 'none';
                 
-                // Chỉ thêm những items mới (chưa được hiển thị)
+                // Sắp xếp data theo thời gian mới nhất trước (descending)
+                data.sort((a, b) => {
+                    const timeA = new Date(a.timestamp || 0).getTime();
+                    const timeB = new Date(b.timestamp || 0).getTime();
+                    return timeB - timeA;
+                });
+
+                // Chỉ thêm các item mới vào đầu danh sách
                 const newItems = data.filter(item => {
                     const itemKey = item.timestamp + '_' + (item.extracted_text || '').substring(0, 50);
                     return !displayedItems.has(itemKey);
                 });
-                
-                console.log('[Update] Adding', newItems.length, 'new items');
-                
-                // Thêm các items mới vào đầu danh sách (newest first)
+
+                // Sắp xếp newItems theo thời gian giảm dần (mới nhất trước)
+                newItems.sort((a, b) => {
+                    const timeA = new Date(a.timestamp || 0).getTime();
+                    const timeB = new Date(b.timestamp || 0).getTime();
+                    return timeB - timeA;
+                });
+                // Đảo ngược mảng để chèn item mới nhất lên đầu
                 newItems.reverse().forEach(item => {
                     const itemKey = item.timestamp + '_' + (item.extracted_text || '').substring(0, 50);
                     displayedItems.add(itemKey);
-                    
                     const resultEl = document.createElement('div');
                     resultEl.className = 'result-item';
                     const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString('vi-VN') : '';
@@ -310,13 +318,22 @@
                             <span class="result-time">${timestamp}</span>
                         </div>
                         <div class="result-content">
-                            <div>
-                                <strong>🤖 AI Response:</strong>
-                                <div class="ai-response">${item.ai_response || 'No response'}</div>
-                            </div>
+                                                        <div>
+                                                                <strong>🤖 AI Response:</strong>
+                                                                                                <div class="ai-response">${
+                                                                                                    (() => {
+                                                                                                        let text = typeof item.ai_response === 'string' ? item.ai_response :
+                                                                                                            (item.ai_response && typeof item.ai_response.response === 'string' ? item.ai_response.response :
+                                                                                                            (item.ai_response && typeof item.ai_response.answer === 'string' ? item.ai_response.answer :
+                                                                                                            (item.ai_response && typeof item.ai_response.content === 'string' ? item.ai_response.content :
+                                                                                                            (item.ai_response && typeof item.ai_response.text === 'string' ? item.ai_response.text :
+                                                                                                            (item.ai_response ? JSON.stringify(item.ai_response, null, 2) : 'No response')))));
+                                                                                                        return text.replace(/\n/g, '<br>');
+                                                                                                    })()
+                                                                                                }</div>
+                                                        </div>
                         </div>
                     `;
-                    
                     // Thêm vào đầu danh sách (prepend)
                     resultsDiv.insertBefore(resultEl, resultsDiv.firstChild);
                 });
